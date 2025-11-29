@@ -3,357 +3,662 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Menu — QR Ordering</title>
+  <title>Menu — QR Ordering (Final Updated)</title>
+
+  <!-- SweetAlert already used earlier -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
   <style>
     :root{
-      --accent:#ff6347;
+      --accent:#ff6b00;
       --bg:#f6f7f9;
       --card:#ffffff;
       --muted:#666;
       --radius:12px;
+      --panel-bg: #0f1720;
+      --panel-text: #fff;
     }
     *{box-sizing:border-box}
-    body{font-family:system-ui,Segoe UI,Arial; margin:0; background:var(--bg); color:#111;}
-    header{
-      background:var(--accent); color:#fff; padding:18px 16px; display:flex; gap:12px; align-items:center; justify-content:space-between;
-      position:sticky; top:0; z-index:20;
+    body{font-family:system-ui,Segoe UI,Arial,Helvetica,sans-serif;margin:0;background:var(--bg);color:#111;-webkit-font-smoothing:antialiased}
+    /* HEADER / STICKY */
+    .sticky-top{position:sticky;top:0;z-index:60;background:var(--bg);padding-bottom:8px}
+    header{background:var(--accent);color:#fff;padding:14px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between}
+    header h1{margin:0;font-size:1.05rem}
+    header .meta{font-size:0.95rem;opacity:0.95}
+    /* Top Dropdown panel (Option B) */
+    .top-dropdown {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 100%;
+      background: #fff;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+      border-bottom: 6px solid rgba(0,0,0,0.02);
+      transform-origin: top center;
+      transform: translateY(-8px) scaleY(0.95);
+      opacity: 0;
+      transition: all .22s ease;
+      display: flex;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 1200;
     }
-    header h1{margin:0; font-size:1.05rem;}
-    header .meta{font-size:0.95rem; opacity:0.95}
-    .container{max-width:1100px; margin:18px auto; padding:0 16px;}
-    .controls{display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap;}
-    .controls input[type="search"], .controls select {
-      padding:10px 12px; border-radius:10px; border:1px solid #e3e6ea; min-width:180px;
+    .top-dropdown.open { transform: translateY(0) scaleY(1); opacity: 1; pointer-events: auto; }
+    .top-dropdown .panel {
+      width: min(920px, 100%);
+      display:flex;
+      gap:8px;
+      padding:12px;
+      align-items:center;
+      justify-content:space-around;
     }
-    .controls button{background:var(--accent); color:#fff; border:none; padding:10px 12px; border-radius:10px; cursor:pointer;}
-    .menu-grid{
-      display:grid;
-      grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
-      gap:12px;
+    .dd-btn {
+      background: #fff;
+      border-radius:10px;
+      padding:12px 16px;
+      cursor:pointer;
+      font-weight:700;
+      border:1px solid #eee;
+      box-shadow: 0 6px 18px rgba(12,20,30,0.04);
+      min-width: 140px;
+      text-align:center;
     }
-    .card{
-      background:var(--card); border-radius:var(--radius); overflow:hidden; box-shadow:0 6px 18px rgba(12,20,30,0.06);
-      display:flex; flex-direction:column;
+    .dd-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(12,20,30,0.08); }
+
+    /* layout */
+    .container{max-width:1100px;margin:12px auto;padding:0 16px}
+    .controls{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+    .static-cats{display:flex;gap:8px;align-items:center;overflow:auto;padding:6px 4px}
+    .chip{background:#fff;padding:8px 12px;border-radius:999px;border:1px solid #eee;white-space:nowrap;font-weight:600;color:#222}
+    .menu-grid { display: flex; flex-direction: column; gap: 16px; padding-bottom: 120px; }
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+      padding: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 14px;
+      overflow: visible;
     }
-    .thumb{width:100%; aspect-ratio:4/3; object-fit:cover; display:block; background:#eee;}
-    .card-body{padding:12px; display:flex; flex-direction:column; gap:8px; flex:1;}
-    .title{font-weight:600; font-size:1rem;}
-    .cat{font-size:0.82rem; color:var(--muted);}
-    .price-row{display:flex; align-items:center; justify-content:space-between; margin-top:auto;}
-    .price{font-weight:700;}
-    .add-btn{background:var(--accent); color:#fff; border:none; padding:8px 10px; border-radius:8px; cursor:pointer;}
+    .card-body { flex: 1; display: flex; flex-direction: column; gap: 6px; padding: 4px 0; min-width:0; }
+    .title { font-weight: 600; font-size: 1rem; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cat, .rating { font-size: 0.82rem; color: var(--muted); }
+    .rating span { color: #ffa200; font-weight: bold; }
+    .price-row { display:flex; align-items:center; margin-top:6px; gap:12px; }
+    .price { font-weight:700; font-size:1rem; color:#111; }
+    .thumb { width: 120px; height: 100px; border-radius: 12px; object-fit: cover; display:block; background:#eee; box-shadow: 0 6px 14px rgba(0,0,0,0.06); }
+    .add-btn { margin-top: 8px; background:#00c445; color:#fff; border:none; padding:8px 14px; border-radius:10px; cursor:pointer; width:120px; font-weight:600; }
+    .meta-row { display:flex; gap:10px; align-items:center; color:var(--muted); font-size:13px; }
+
+    @media(max-width:600px){
+      header{padding:12px}
+      .card{ padding:10px; flex-direction:row; gap:10px }
+      .thumb{ width:100px; height:85px }
+      .add-btn{ width:100px; font-size:0.85rem }
+      .title{ white-space:normal; font-size:15px }
+      .controls .static-cats{ padding-left:2px }
+      .top-dropdown .panel{ flex-direction:column; gap:8px; padding:8px }
+      .dd-btn{ min-width: 90%; }
+    }
+
+    /* CART - FULL WIDTH AT BOTTOM */
     footer.cart-bar{
-      position:fixed; left:16px; right:16px; bottom:16px; z-index:40; display:flex; justify-content:flex-end;
+      position:fixed;
+      left:0;
+      right:0;
+      bottom:0;
+      z-index:70;
+      display:flex;
+      justify-content:center;
+      pointer-events:none;
     }
-    .cart{
-      background:linear-gradient(180deg,#fff,#fafafa); padding:12px; border-radius:14px; box-shadow:0 8px 24px rgba(12,20,30,0.12); display:flex; gap:10px; align-items:center;
+    .cart {
+      background:linear-gradient(180deg,#fff,#fafafa);
+      padding:12px;
+      border-radius:10px;
+      box-shadow:0 -6px 22px rgba(0,0,0,0.08);
+      display:flex;
+      gap:12px;
+      align-items:center;
+      max-width:1100px;
+      width:100%;
+      margin:8px;
+      pointer-events:auto;
+      transition: transform .16s ease, opacity .16s ease;
+      transform: translateY(12px);
+      opacity: 0;
     }
-    .cart button{padding:10px 12px; border-radius:10px; border:none; cursor:pointer;}
-    .badge{background:#222; color:#fff; padding:6px 8px; border-radius:999px; font-weight:700;}
-    /* modal */
-    .modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.45); display:none; align-items:center; justify-content:center; z-index:60;}
-    .modal{background:#fff; width:min(800px,95%); border-radius:12px; padding:16px; max-height:85vh; overflow:auto;}
-    table{width:100%; border-collapse:collapse;}
-    th,td{padding:8px 6px; text-align:left; border-bottom:1px solid #eee;}
-    .qty-btn{padding:6px 8px; border-radius:6px; border:1px solid #ddd; cursor:pointer; background:#fff;}
-    .small{font-size:0.9rem; color:var(--muted);}
-    @media (max-width:600px){
-      .controls{flex-direction:column; align-items:stretch;}
-      header{flex-direction:column; align-items:flex-start; gap:8px;}
-    }
+    .cart.visible{ transform: translateY(0); opacity: 1; }
+    .cart .left{ display:flex; flex-direction:column; }
+    .cart .actions{ margin-left:auto; display:flex; gap:8px; align-items:center; }
+
+    /* floating buttons (call waiter / get bill) */
+    #floatingButtons { position: fixed; right: 16px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 12px; z-index: 9999; transition: transform .16s ease; }
+    .float-btn { background: linear-gradient(45deg, #ff006a, var(--accent)); color: #fff; padding:10px 18px; border:none; border-radius:30px; cursor:pointer; font-weight:700; font-size:14px; white-space:nowrap; box-shadow:0 4px 12px rgba(0,0,0,0.12); }
+    .float-btn[hidden]{ display:none !important; }
+    .float-toggle { position: fixed; right: 24px; bottom: 22px; z-index: 10001; width:54px; height:54px; border-radius:50%; background:var(--accent); color:#fff; display:flex;align-items:center;justify-content:center; font-weight:800; box-shadow:0 8px 22px rgba(0,0,0,0.16); cursor:pointer; transition:transform .18s ease }
+
+    /* modal (order summary) left as-is from your file */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;z-index:80}
+    .modal{background:#fff;width:min(820px,96%);border-radius:12px;padding:16px;max-height:85vh;overflow:auto}
+    table{width:100%;border-collapse:collapse}th,td{padding:8px 6px;text-align:left;border-bottom:1px solid #eee}
+    .qty-btn{padding:6px 10px;border-radius:6px;border:1px solid #ddd;cursor:pointer;background:#fff}
   </style>
 </head>
 <body>
+
+<!-- HEADER -->
+<div class="sticky-top" id="topHeaderWrap">
   <header>
-    <div>
-      <h1>Restaurant Menu</h1>
-      <div class="small">Scan QR and order — simple & free</div>
+    <div style="display:flex;gap:12px;align-items:center">
+      <div id="hamburger" style="cursor:pointer; font-weight:900; font-size:20px; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.08)">☰</div>
+      <div>
+        <h1 style="margin:0;">Restaurant Menu</h1>
+        <div class="small">Scan QR and order — simple &amp; fast</div>
+      </div>
     </div>
     <div class="meta" id="table-info">Table: —</div>
   </header>
 
-  <div class="container">
-    <div class="controls">
-      <input type="search" id="search" placeholder="Search items, e.g. paneer, biryani..." />
-      <select id="categoryFilter">
-        <option value="">All categories</option>
-      </select>
-      <button id="clearFilters">Clear</button>
-      <div style="flex:1"></div>
-      <div class="small">Items: <span id="count">0</span></div>
-    </div>
-
-    <div id="menu" class="menu-grid" aria-live="polite"></div>
-  </div>
-
-  <footer class="cart-bar">
-    <div class="cart" role="region" aria-label="Cart">
-      <div style="display:flex;flex-direction:column;margin-right:12px;">
-        <div style="font-weight:700">Cart</div>
-        <div class="small" id="cartItemsSmall">0 items • ₹0</div>
-      </div>
-      <button id="viewCart" style="background:#fff;border:1px solid #ddd;margin-right:8px;">View Cart</button>
-      <button id="checkout" style="background:var(--accent);color:#fff;">Checkout</button>
-    </div>
-  </footer>
-
-  <!-- modal -->
-  <div id="modalBackdrop" class="modal-backdrop">
-    <div class="modal" role="dialog" aria-modal="true">
-      <h3>Order Summary</h3>
-      <div id="orderContent"></div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
-        <button id="closeModal" style="background:#fff;border:1px solid #ddd;padding:8px 10px;border-radius:8px;">Close</button>
-        <button id="sendOrder" style="background:var(--accent);color:#fff;padding:8px 12px;border-radius:8px;">Send Order</button>
-      </div>
+  <!-- Top Dropdown Panel (hidden by default) -->
+  <div class="top-dropdown" id="topDropdown" aria-hidden="true">
+    <div class="panel" role="menu" aria-label="Quick actions">
+      <div class="dd-btn" id="ddCallWaiter" role="menuitem">Call Waiter</div>
+      <div class="dd-btn" id="ddOrderHistory" role="menuitem">Order History</div>
+      <div class="dd-btn" id="ddGetBill" role="menuitem">Get The Bill</div>
+      <div class="dd-btn" id="ddMenu" role="menuitem">Menu</div>
     </div>
   </div>
+</div>
+
+<!-- MAIN -->
+<div class="container">
+  <div class="controls">
+    <!-- Static category chips (Swiggy style visible under header) -->
+    <div class="static-cats" id="staticCats" aria-hidden="false"></div>
+    <div style="flex:1"></div>
+    <div class="small">Items: <span id="count">0</span></div>
+  </div>
+
+  <div id="menu" class="menu-grid" aria-live="polite"></div>
+</div>
+
+<!-- CART (Full width, centered, visible only when items exist) -->
+<footer class="cart-bar">
+  <div class="cart" id="cartBar" role="region" aria-label="Cart">
+    <div class="left">
+      <div style="font-weight:800">Cart</div>
+      <div class="small" id="cartItemsSmall">0 items • ₹0</div>
+    </div>
+    <div class="actions">
+      <button id="viewCart" style="background:#fff;border:1px solid #ddd;padding:8px 10px;border-radius:8px;">View</button>
+      <button id="checkout" style="background:var(--accent);color:#fff;padding:8px 12px;border-radius:8px;">Checkout</button>
+    </div>
+  </div>
+</footer>
+
+<!-- Floating buttons -->
+<div id="floatingButtons" aria-hidden="false">
+  <button class="float-btn" id="callWaiterBtn" data-action="call_waiter">Call Waiter</button>
+  <button class="float-btn" id="getBillBtn" data-action="get_bill">Get the Bill</button>
+</div>
+<div class="float-toggle small" id="floatToggle" title="Open menu">m</div>
+
+<!-- ORDER SUMMARY / MODAL -->
+<div id="modalBackdrop" class="modal-backdrop">
+  <div class="modal" role="dialog" aria-modal="true">
+    <h3>Order Summary</h3>
+    <div id="orderContent"></div>
+    <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:12px;align-items:center;">
+      <div class="circle-wrap" id="actionArea">
+        <button id="startPlace" class="circle-btn" style="display:inline-block;padding:10px 16px;border-radius:8px;background:var(--accent);color:#fff;border:none">Place</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
-/* ================== CONFIG ================== */
-/* Replace this with your raw github url OR "menu.json" if local. */
-const MENU_URL = "menu.json";
-/* Example GitHub raw: https://raw.githubusercontent.com/USERNAME/REPO/main/menu.json */
+/* ---------------- CONFIG (kept as in your file) ---------------- */
+const SUPABASE_URL = 'https://wlnyyvcukcyyjmdxjdji.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indsbnl5dmN1a2N5eWptZHhqZGppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyMTc4MDksImV4cCI6MjA3OTc5MzgwOX0.mcbI2SpvJKwWjUqbX8xxz05MGrZvkdtqGJKd9ysSIEA';
+const MENU_TABLE = 'menu';
+const ORDERS_TABLE = 'orders';
+const MENU_URL = 'menu.json';
+const SMS_HOOK_URL = '';
 
-/* ================== UTILITIES ================== */
-const qs = sel => document.querySelector(sel);
-const qsa = sel => Array.from(document.querySelectorAll(sel));
-const tableInfoEl = qs('#table-info');
+/* ---------------- HELPERS & STATE (kept intact) ---------------- */
+const qs = s => document.querySelector(s);
+const qsa = s => Array.from(document.querySelectorAll(s));
+function esc(s){ return String(s||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('\"','&quot;'); }
+function niceAlert(opts){ if(window.Swal) return Swal.fire(opts); alert((opts.title?opts.title + '\\n':'') + (opts.text || '')); }
 
-function getTableFromURL(){
-  const p = new URLSearchParams(window.location.search);
-  return p.get('table') || p.get('table_no') || p.get('t') || 'Unknown';
-}
-
-/* ================== APP STATE ================== */
-let MENU = []; // loaded menu items
+let MENU = [];
 let filtered = [];
-let cart = []; // {id, name, price, qty}
+let cart = [];
+let GST_VALUE = 0;
+let countdownTimer = null;
+let countdownStart = null;
+let countdownSeconds = 15;
+let countdownCancelled = false;
+let countdownInProgress = false;
+let finalizeCalled = false;
+let currentOrderRecord = null;
 
-/* ================== RENDER ================== */
-function renderCategories(){
-  const cats = Array.from(new Set(MENU.map(i=>i.category))).filter(Boolean).sort();
-  const sel = qs('#categoryFilter');
-  sel.innerHTML = `<option value="">All categories</option>` + cats.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+/* ---------------- FETCH MENU (Supabase or local) (untouched) ---------------- */
+async function fetchMenu(){
+  if(!SUPABASE_URL || !SUPABASE_ANON_KEY){
+    console.warn('Supabase not configured — using local menu.json');
+    const r = await fetch(MENU_URL);
+    if(!r.ok) throw new Error('menu.json load failed');
+    return await r.json();
+  }
+  const url = `${SUPABASE_URL}/rest/v1/${MENU_TABLE}?select=*&order:id.asc`;
+  const res = await fetch(url, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
+  if(!res.ok){
+    const t = await res.text();
+    throw new Error('Supabase fetch failed: ' + res.status + ' ' + t);
+  }
+  return await res.json();
 }
 
-function escapeHtml(s){ return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;'); }
+/* ---------------- RENDER + UI (preserve original logic; updated only UI insertion points) ---------------- */
+function renderCategories(){
+  const cats = [...new Set(MENU.map(i=>i.category || 'Misc'))];
+  const sc = qs('#staticCats'); sc.innerHTML = '';
+  cats.forEach(c=>{
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.textContent = c;
+    chip.addEventListener('click', ()=> scrollToCategory(c));
+    sc.appendChild(chip);
+  });
+  return cats;
+}
+
+function renderCategoryPanel(){
+  const cats = [...new Set(MENU.map(i=>i.category || 'Misc'))];
+  const list = qs('#catList');
+  if(!list) return;
+  list.innerHTML = '';
+  cats.forEach(c=>{
+    const count = MENU.filter(x=> (x.category||'Misc')===c ).length;
+    const item = document.createElement('div');
+    item.className = 'cat-item';
+    item.dataset.cat = c;
+    item.innerHTML = `<div class="name">${esc(c)}</div><div class="count">${count}</div>`;
+    item.addEventListener('click', ()=>{ scrollToCategory(c); closeMenuPanel(); });
+    list.appendChild(item);
+  });
+}
 
 function renderMenu(list){
-  const container = qs('#menu');
-  container.innerHTML = '';
-  document.getElementById('count').textContent = list.length;
-  if(list.length === 0){
-    container.innerHTML = `<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--muted)">No items found</div>`;
-    return;
-  }
-  list.forEach(item=>{
-    const div = document.createElement('div');
-    div.className = 'card';
-    // image lazy load with loading="lazy"
-    div.innerHTML = `
-      <img class="thumb" loading="lazy" decoding="async" src="${item.img}" alt="${escapeHtml(item.name)}">
+  const container = qs('#menu'); container.innerHTML = '';
+  qs('#count') && (qs('#count').textContent = list.length);
+  if(list.length === 0){ container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted)">No items</div>'; return; }
+
+  list.forEach((it, idx) => {
+    const thumb = it.thumb || it.img || `https://picsum.photos/seed/${idx+1}/300/200`;
+    const rating = it.rating || (Math.round((3.8 + Math.random()*1.4)*10)/10);
+    const card = document.createElement('div'); card.className = 'card';
+    card.dataset.cat = it.category || 'Misc';
+    card.id = `item-${idx}`;
+
+    card.innerHTML = `
       <div class="card-body">
-        <div class="title">${escapeHtml(item.name)}</div>
-        <div class="cat small">${escapeHtml(item.category)}</div>
-        <div style="display:flex;align-items:center;gap:8px;" class="price-row">
-          <div class="price">₹${item.price}</div>
-          <button class="add-btn" data-id="${item.id}">Add</button>
+        <div class="title">${esc(it.name)}</div>
+        <div class="meta-row">
+          <div class="rating"><span>★</span> ${esc(String(rating))}</div>
+          <div class="cat">${esc(it.category || 'Misc')}</div>
+        </div>
+        <div class="price-row">
+          <div class="price">₹${esc(String(it.price||0))}</div>
         </div>
       </div>
+
+      <div style="display:flex;flex-direction:column;align-items:center;">
+        <img class="thumb" loading="lazy" src="${esc(thumb)}" alt="${esc(it.name)}">
+        <button class="add-btn" data-id="${esc(String(it.id))}">ADD</button>
+      </div>
     `;
-    container.appendChild(div);
+    container.appendChild(card);
   });
-  // attach add events
-  qsa('.add-btn').forEach(btn=>{
-    btn.onclick = ()=> {
-      const id = Number(btn.dataset.id);
-      const item = MENU.find(m=>m.id===id);
-      addToCart(item, 1);
-      // small animation
-      btn.textContent = 'Added';
-      setTimeout(()=>btn.textContent = 'Add',700);
-    };
-  });
-}
 
-/* ================== FILTER & SEARCH ================== */
-function applyFilters(){
-  const q = qs('#search').value.trim().toLowerCase();
-  const cat = qs('#categoryFilter').value;
-  filtered = MENU.filter(it=>{
-    const matchesCat = cat ? it.category === cat : true;
-    const matchesQ = q ? (it.name.toLowerCase().includes(q) || (it.category||'').toLowerCase().includes(q)) : true;
-    return matchesCat && matchesQ;
-  });
-  renderMenu(filtered);
-}
-
-/* ================== CART ================== */
-function addToCart(item, qty=1){
-  const existing = cart.find(c=>c.id===item.id);
-  if(existing) existing.qty += qty;
-  else cart.push({id:item.id, name:item.name, price:item.price, qty});
-  updateCartUI();
-}
-
-function updateCartUI(){
-  const total = cart.reduce((s,i)=>s + i.price * i.qty, 0);
-  const count = cart.reduce((s,i)=>s + i.qty, 0);
-  qs('#cartItemsSmall').textContent = `${count} items • ₹${total}`;
-}
-
-function showCartModal(){
-  const modal = qs('#modalBackdrop');
-  const content = qs('#orderContent');
-  if(cart.length===0){
-    content.innerHTML = `<div style="padding:18px;color:var(--muted)">Cart is empty</div>`;
-  } else {
-    let html = `<table><thead><tr><th>Item</th><th>Price</th><th>Qty</th><th>Total</th></tr></thead><tbody>`;
-    cart.forEach(ci=>{
-      html += `<tr>
-        <td>${escapeHtml(ci.name)}</td>
-        <td>₹${ci.price}</td>
-        <td>
-          <button class="qty-btn" data-act="dec" data-id="${ci.id}">-</button>
-          &nbsp; ${ci.qty} &nbsp;
-          <button class="qty-btn" data-act="inc" data-id="${ci.id}">+</button>
-        </td>
-        <td>₹${ci.price * ci.qty}</td>
-      </tr>`;
-    });
-    const total = cart.reduce((s,i)=>s + i.price*i.qty,0);
-    html += `</tbody></table><div style="text-align:right;margin-top:8px;font-weight:700">Total: ₹${total}</div>`;
-    content.innerHTML = html;
-
-    // attach qty events
-    qsa('.qty-btn').forEach(b=>{
-      b.onclick = () => {
-        const id = Number(b.dataset.id);
-        const act = b.dataset.act;
-        const item = cart.find(c=>c.id===id);
-        if(!item) return;
-        if(act === 'inc') item.qty++;
-        else item.qty = Math.max(0, item.qty - 1);
-        // remove zero-qty
-        cart = cart.filter(c=>c.qty>0);
-        showCartModal();
-        updateCartUI();
-      };
-    });
-  }
-  modal.style.display = 'flex';
-}
-
-/* ================== CHECKOUT / SEND ORDER ================== */
-function buildOrderPayload(){
-  const table = getTableFromURL();
-  const order = {
-    table,
-    created_at: new Date().toISOString(),
-    items: cart.map(c=>({id:c.id, name:c.name, price:c.price, qty:c.qty})),
-    total: cart.reduce((s,i)=>s + i.price*i.qty, 0)
-  };
-  return order;
-}
-
-async function sendOrder(){
-  if(cart.length===0) { alert('Cart is empty'); return; }
-  const payload = buildOrderPayload();
-  // For now we just show JSON to user. You can POST this to your Apps Script webhook or Firebase.
-  try {
-    // Example: send to webhook (uncomment & replace WEBHOOK_URL to enable)
-    /*
-    const WEBHOOK_URL = "YOUR_APPS_SCRIPT_WEBHOOK_URL";
-    const res = await fetch(WEBHOOK_URL, {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify(payload)
-    });
-    if(!res.ok) throw new Error('Network response was not ok');
-    alert('Order sent to kitchen!');
-    */
-    // fallback: show JSON and copy to clipboard
-    const txt = JSON.stringify(payload, null, 2);
-    await navigator.clipboard.writeText(txt);
-    alert('Order JSON copied to clipboard (you can paste to owner).');
-    // clear cart
-    cart = [];
-    updateCartUI();
-    qs('#modalBackdrop').style.display = 'none';
-  } catch(err){
-    console.error(err);
-    alert('Failed to send order. See console for details.');
-  }
-}
-
-/* ================== BOOTSTRAP / FETCH MENU ================== */
-async function init(){
-  tableInfoEl.textContent = 'Table: ' + getTableFromURL();
-
-  // allow local/testing fallback if MENU_URL not configured
-  if(!MENU_URL || MENU_URL.includes('PUT_YOUR_RAW_URL_HERE')){
-    console.warn('MENU_URL not configured. Trying local menu.json...');
-  }
-
-  try {
-    const res = await fetch(MENU_URL);
-    if(!res.ok) throw new Error('HTTP ' + res.status);
-    MENU = await res.json();
-  } catch(err){
-    console.warn('Fetch failed:', err);
-    // fallback: try local menu.json
-    try {
-      const res2 = await fetch('menu.json');
-      if(res2.ok) {
-        MENU = await res2.json();
-      } else {
-        throw new Error('Local fallback failed');
-      }
-    } catch(err2){
-      console.error('Failed to load menu.json:', err2);
-      // show friendly message
-      qs('#menu').innerHTML = `<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--muted)">
-        Unable to load menu. Make sure MENU_URL is set to a CORS-friendly raw URL or keep a local menu.json in same folder.
-      </div>`;
-      return;
+  // event delegation for add button (fixes last-item bug)
+  container.onclick = function(e){
+    const btn = e.target.closest('.add-btn');
+    if(btn){
+      const id = btn.dataset.id; const item = MENU.find(x=>String(x.id)===String(id)); if(item) addToCart(item,1);
+      btn.textContent = 'Added'; setTimeout(()=>btn.textContent='ADD',600);
+      if(cart.length>0) showCartBar();
     }
-  }
-
-  // ensure numeric ids and proper data
-  MENU = MENU.map((it, idx) => ({
-    id: Number(it.id ?? (idx+1)),
-    name: String(it.name ?? 'Item'),
-    price: Number(it.price ?? 0),
-    category: String(it.category ?? 'Misc'),
-    img: String(it.img ?? 'https://picsum.photos/400?random=' + (100+idx))
-  }));
-
-  renderCategories();
-  applyFilters();
-
-  // events
-  qs('#search').addEventListener('input', ()=> applyFilters());
-  qs('#categoryFilter').addEventListener('change', ()=> applyFilters());
-  qs('#clearFilters').addEventListener('click', ()=>{
-    qs('#search').value = '';
-    qs('#categoryFilter').value = '';
-    applyFilters();
-  });
-  qs('#viewCart').addEventListener('click', ()=> showCartModal());
-  qs('#checkout').addEventListener('click', ()=> {
-    // open modal first
-    showCartModal();
-  });
-  qs('#closeModal').addEventListener('click', ()=> qs('#modalBackdrop').style.display = 'none');
-  qs('#modalBackdrop').addEventListener('click', (e)=> { if(e.target === qs('#modalBackdrop')) qs('#modalBackdrop').style.display = 'none'; });
-  qs('#sendOrder').addEventListener('click', sendOrder);
-  updateCartUI();
+  };
 }
 
-/* run */
+/* ---------------- SCROLL TO CATEGORY ---------------- */
+function scrollToCategory(catName){
+  const el = document.querySelector(`.card[data-cat="${CSS.escape(catName)}"]`) || document.querySelector(`.card[data-cat="${catName}"]`);
+  if(el){
+    const headerHeight = document.querySelector('.sticky-top')?.offsetHeight || 88;
+    const rect = el.getBoundingClientRect();
+    const absoluteTop = window.pageYOffset + rect.top;
+    window.scrollTo({ top: absoluteTop - headerHeight - 8, behavior: 'smooth' });
+  }
+}
+
+/* ---------------- CART (original) ---------------- */
+function addToCart(item, qty=1){
+  const existing = cart.find(c=>c.id === item.id);
+  if(existing) existing.qty += qty; else cart.push({id:item.id, name:item.name, price:Number(item.price||0), qty});
+  updateCartUI();
+}
+function updateCartUI(){
+  const subtotal = cart.reduce((s,i)=>s + i.price * i.qty, 0);
+  const gstAmount = Math.round((subtotal * GST_VALUE) / 100);
+  const total = subtotal + gstAmount;
+  const count = cart.reduce((s,i)=>s + i.qty, 0);
+  if(qs('#cartItemsSmall')) qs('#cartItemsSmall').textContent = `${count} items • ₹${total}`;
+  // show/hide cart bar (now full-width center)
+  const cartEl = qs('#cartBar');
+  if(cartEl){
+    const wrapper = cartEl.closest('footer.cart-bar');
+    if(count>0) wrapper.querySelector('.cart').classList.add('visible'); else wrapper.querySelector('.cart').classList.remove('visible');
+  }
+}
+
+/* ---------------- QUICK ACTIONS preserved ---------------- */
+qs('#clearFilters')?.addEventListener('click', ()=> { if(qs('#search')) qs('#search').value=''; if(qs('#categoryFilter')) qs('#categoryFilter').value=''; applyFilters(); });
+qs('#addAll')?.addEventListener('click', ()=> { MENU.forEach(i=> addToCart(i,1)); });
+
+/* ---------------- Float buttons toggle (keeps earlier UX) ---------------- */
+const floatToggle = qs('#floatToggle');
+const floatingButtons = qs('#floatingButtons');
+let floatOpen = false;
+floatingButtons.style.display = 'none';
+floatToggle.addEventListener('click', ()=>{
+  if(floatOpen){
+    floatingButtons.style.display = 'none';
+    floatOpen = false;
+  } else {
+    floatingButtons.style.display = 'flex';
+    floatOpen = true;
+  }
+});
+
+/* ---------------- TOP DROPDOWN (hamburger) ---------------- */
+const hamburger = qs('#hamburger');
+const topDropdown = qs('#topDropdown');
+
+function openTopDropdown(){
+  topDropdown.classList.add('open');
+  topDropdown.setAttribute('aria-hidden','false');
+}
+function closeTopDropdown(){
+  topDropdown.classList.remove('open');
+  topDropdown.setAttribute('aria-hidden','true');
+}
+hamburger.addEventListener('click', ()=> {
+  if(topDropdown.classList.contains('open')) closeTopDropdown(); else openTopDropdown();
+});
+
+// close when clicking outside the dropdown
+document.addEventListener('click', (e)=>{
+  const inside = e.composedPath().includes(topDropdown) || e.composedPath().includes(hamburger);
+  if(!inside) closeTopDropdown();
+});
+
+/* ---------------- Dropdown actions - wire to existing flows (no logic change) ---------------- */
+qs('#ddCallWaiter')?.addEventListener('click', async ()=>{
+  closeTopDropdown();
+  // Attempt to insert into waiter_requests if Supabase configured, else alert
+  if(SUPABASE_URL && SUPABASE_ANON_KEY){
+    try{
+      const tableNo = new URLSearchParams(window.location.search).get('table') || 'Unknown';
+      const payload = { table_no: String(tableNo), action: 'call_waiter', status: 'new', created_at: new Date().toISOString() };
+      const url = `${SUPABASE_URL}/rest/v1/waiter_requests`;
+      const res = await fetch(url, { method:'POST', headers: { apikey: SUPABASE_ANON_KEY, Authorization:`Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=representation' }, body: JSON.stringify(payload) });
+      if(!res.ok) throw new Error('Waiter request failed');
+      niceAlert({ icon:'success', title:'Called waiter', text: 'A waiter has been notified to your table.' });
+    } catch(e){
+      console.warn('waiter request failed', e);
+      niceAlert({ icon:'info', title:'Call waiter', text:'Could not call waiter via backend. Please notify staff.'});
+    }
+  } else {
+    niceAlert({ icon:'info', title:'Call waiter', text:'Supabase not configured. Please notify staff manually.'});
+  }
+});
+
+qs('#ddOrderHistory')?.addEventListener('click', ()=>{
+  closeTopDropdown();
+  showOrderHistoryModal();
+});
+
+qs('#ddGetBill')?.addEventListener('click', ()=>{
+  closeTopDropdown();
+  // show order summary modal (which calculates totals) — user can "Get Bill" via same modal
+  showOrderSummary();
+});
+
+qs('#ddMenu')?.addEventListener('click', ()=>{
+  closeTopDropdown();
+  // scroll to top (menu)
+  window.scrollTo({top:0,behavior:'smooth'});
+});
+
+/* ---------------- ORDER SUMMARY modal (preserve behavior) ---------------- */
+function showOrderSummary(){ const box = qs('#orderContent'); if(!box) return; box.innerHTML=''; if(!cart.length){ box.innerHTML = '<div style="padding:18px;color:var(--muted)">Cart is empty</div>'; } else {
+  cart.forEach(ci => {
+    const row = document.createElement('div');
+    row.style = 'display:flex;justify-content:space-between;align-items:center;margin:10px 0;padding:6px 0;border-bottom:1px solid #f0f0f0';
+    row.innerHTML = `<div style="flex:1"><div style="font-weight:700">${esc(ci.name)}</div><div class="small">₹${esc(String(ci.price))}</div></div><div style="display:flex;align-items:center;gap:8px"><button class="qty-btn" data-act="dec" data-id="${esc(String(ci.id))}">-</button><div id="qty-${esc(String(ci.id))}">${ci.qty}</div><button class="qty-btn" data-act="inc" data-id="${esc(String(ci.id))}">+</button></div>`;
+    box.appendChild(row);
+  });
+  const subtotal = cart.reduce((s,i)=>s + i.price*i.qty,0);
+  const gstAmount = Math.round((subtotal * GST_VALUE) / 100);
+  const grand = subtotal + gstAmount;
+  const totDiv = document.createElement('div');
+  totDiv.style='text-align:right;margin-top:12px;font-weight:800';
+  totDiv.innerHTML = `Subtotal: ₹${subtotal} &nbsp; | &nbsp; GST(${GST_VALUE}%): ₹${gstAmount} &nbsp; | &nbsp; <span style="font-size:1.1em">Total: ₹${grand}</span>`;
+  box.appendChild(totDiv);
+  box.onclick = e => {
+    const btn = e.target.closest('.qty-btn'); if(!btn) return;
+    const id = btn.dataset.id; const act = btn.dataset.act; const item = cart.find(x=>String(x.id)===String(id));
+    if(!item) return;
+    if(act === 'inc') item.qty++;
+    else item.qty = Math.max(0, item.qty - 1);
+    cart = cart.filter(c=>c.qty>0);
+    updateCartUI(); showOrderSummary();
+  };
+ }
+ qs('#modalBackdrop') && (qs('#modalBackdrop').style.display = 'flex');
+}
+qs('#viewCart')?.addEventListener('click', showOrderSummary);
+qs('#checkout')?.addEventListener('click', showOrderSummary);
+qs('#modalBackdrop')?.addEventListener('click', e => { if(e.target === qs('#modalBackdrop')) { qs('#modalBackdrop').style.display = 'none'; stopCountdown(); } });
+
+/* ---------------- DATABASE helpers (unchanged) ---------------- */
+async function insertOrderToDB(orderPayload){
+  if(!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+  try{
+    const ordersUrl = `${SUPABASE_URL}/rest/v1/${ORDERS_TABLE}`;
+    const res = await fetch(ordersUrl, {
+      method:'POST',
+      headers:{
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type':'application/json',
+        'Prefer':'return=representation'
+      },
+      body: JSON.stringify(orderPayload)
+    });
+    if(!res.ok){
+      const t = await res.text();
+      throw new Error('Order insert failed: ' + res.status + ' ' + t);
+    }
+    const data = await res.json();
+    return data && data[0] ? data[0] : null;
+  }catch(err){ console.error('Insert order error', err); return null; }
+}
+async function attemptSendSMS(phoneOrTable, text){ if(!SMS_HOOK_URL) return false; try{ await fetch(SMS_HOOK_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({to: phoneOrTable, message: text}) }); return true;}catch(err){ console.warn('SMS send failed', err); return false; } }
+
+/* ---------------- Place button rendering & countdown (preserved) ---------------- */
+function renderPlaceButton(){ const area = qs('#actionArea'); if(!area) return; area.innerHTML=''; const btn = document.createElement('button'); btn.id='startPlace'; btn.className='circle-btn'; btn.textContent='Place'; area.appendChild(btn); btn.addEventListener('click', ()=> startCircularCountdown(15)); }
+
+let countdownTimerRef = null;
+function startCircularCountdown(seconds = 15){
+  if(countdownInProgress) return;
+  if(!cart.length){ niceAlert({ icon:'warning', title:'Add items first', text:'Please add at least one item before placing the order!', confirmButtonColor:'#ff6b00' }); return; }
+  countdownInProgress = true; finalizeCalled = false; countdownCancelled = false; countdownSeconds = seconds; countdownStart = Date.now();
+  const area = qs('#actionArea'); if(!area) return;
+  area.innerHTML = '';
+  const circleBtn = document.createElement('button'); circleBtn.className = 'circle-btn'; circleBtn.textContent = `${seconds}s`;
+  const cancelBtn = document.createElement('button'); cancelBtn.className = 'cancel-btn'; cancelBtn.textContent = 'Cancel';
+  // minimal styling for these inlined as earlier CSS doesn't include circle-btn/cancel-btn classes separately
+  circleBtn.style.cssText = 'width:64px;height:40px;border-radius:22px;border:none;background:conic-gradient(var(--accent) 0deg,#eee 0deg);color:#fff;font-weight:700;cursor:pointer';
+  cancelBtn.style.cssText = 'background:#fff;border:1px solid #ddd;padding:8px 10px;border-radius:8px;cursor:pointer;margin-left:8px';
+  area.appendChild(circleBtn); area.appendChild(cancelBtn);
+  function update(){ if(!countdownInProgress) return; const elapsed = Date.now() - countdownStart; const pct = Math.min(1, elapsed / (countdownSeconds*1000)); const deg = Math.round(pct * 360); circleBtn.style.background = `conic-gradient(var(--accent) ${deg}deg, #eee ${deg}deg)`; const remain = Math.max(0, Math.ceil((countdownSeconds*1000 - elapsed)/1000)); circleBtn.textContent = `${remain}s`; if(pct >= 1 && !finalizeCalled){ finalizeCalled = true; stopCountdown(false); finalizeOrder().catch(err=>console.error('finalizeOrder error', err)); } }
+  update();
+  countdownTimerRef = setInterval(()=>{ if(countdownCancelled){ stopCountdown(); } else update(); }, 150);
+  cancelBtn.addEventListener('click', ()=>{ countdownCancelled = true; stopCountdown(); niceAlert({ icon:'info', title:'Order cancelled', text:'Your order has been cancelled', confirmButtonColor:'#ff6b00' }); qs('#modalBackdrop') && (qs('#modalBackdrop').style.display = 'none'); });
+}
+function stopCountdown(renderPlace = true){ if(countdownTimerRef){ clearInterval(countdownTimerRef); countdownTimerRef = null; } countdownInProgress = false; finalizeCalled = false; countdownCancelled = false; if(renderPlace) renderPlaceButton(); }
+
+/* ---------------- FINALIZE ORDER (unchanged logic) ---------------- */
+async function finalizeOrder() {
+  if(finalizeCalled) return;
+  finalizeCalled = true;
+
+  const tableNumber = new URLSearchParams(window.location.search).get('table');
+
+  if(!tableNumber || tableNumber.trim()===''){
+    stopCountdown();
+    try{ await attemptSendSMS("Unknown","You are not present in any table."); }catch(e){console.warn("SMS failed",e)}
+    niceAlert({ icon:"error", title:"You are not in any table", text:"Please scan the table QR again.", confirmButtonColor:"#ff6b00" });
+    finalizeCalled = false;
+    return;
+  }
+
+  if(!cart.length){
+    niceAlert({ icon:'warning', title:'Add items first', text:'Please add at least one item before placing the order!', confirmButtonColor:'#ff6b00' });
+    stopCountdown();
+    finalizeCalled = false;
+    return;
+  }
+
+  const tableNo = tableNumber;
+  const subtotal = cart.reduce((s,i)=>s + i.price*i.qty,0);
+  const gstAmount = Math.round((subtotal * GST_VALUE) / 100);
+  const grand = subtotal + gstAmount;
+
+  const orderPayloadForDB = {
+    table_no: tableNo,
+    created_at: new Date().toISOString(),
+    items_json: JSON.stringify(cart.map(c=>({id:c.id,name:c.name,price:c.price,qty:c.qty}))),
+    total: grand,
+    status: 'new'
+  };
+
+  currentOrderRecord = null;
+  try{
+    const inserted = await insertOrderToDB(orderPayloadForDB);
+    if(inserted){ currentOrderRecord = inserted; }
+  }catch(e){ console.error("DB insert error", e); }
+
+  niceAlert({ icon:'success', title:'Your order is being prepared', text:'The kitchen has started working on your order!', timer:3000, showConfirmButton:false });
+  try{ const smsText = `Table ${tableNo}: Your order is being prepared. Total ₹${grand}`; await attemptSendSMS(tableNo, smsText); }catch(e){}
+  cart = [];
+  updateCartUI();
+  qs('#modalBackdrop') && (qs('#modalBackdrop').style.display = 'none');
+  stopCountdown(true);
+  try{ localStorage.setItem('hasOrderHistory','1'); }catch(e){}
+  setTimeout(()=>{ window.scrollTo({top:0,behavior:'smooth'}); }, 800);
+}
+
+/* ---------------- BOOTSTRAP init (unchanged flow) ---------------- */
+async function init(){
+  qs('#table-info') && (qs('#table-info').textContent = 'Table: ' + (new URLSearchParams(window.location.search).get('table') || '—'));
+  try{
+    const data = await fetchMenu();
+    MENU = data.map((it, i)=>({ id: it.id ?? (i+1), name: it.name ?? ('Item '+(i+1)), price: Number(it.price ?? 0), category: it.category ?? 'Misc', img: it.img ?? it.image ?? `https://picsum.photos/seed/${i+1}/300/200`, thumb: it.thumb ?? (it.img? it.img : `https://picsum.photos/seed/${i+1}/300/200`), rating: it.rating }));
+    renderCategories();
+    renderCategoryPanel();
+    renderMenu(MENU);
+    if(qs('#search')) qs('#search').oninput = applyFilters;
+    if(qs('#categoryFilter')) qs('#categoryFilter').onchange = applyFilters;
+    renderPlaceButton();
+
+    // initially hide floating buttons
+    floatingButtons.style.display = 'none';
+
+    // fetch GST value (if exists)
+    if(SUPABASE_URL && SUPABASE_ANON_KEY){
+      try {
+        const gstUrl = `${SUPABASE_URL}/rest/v1/gst_rate?select=*`;
+        const gstRes = await fetch(gstUrl, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
+        if(gstRes.ok){
+          const gstData = await gstRes.json();
+          GST_VALUE = Number(gstData[0]?.gst ?? gstData[0]?.gst_value ?? gstData[0]?.rate ?? 0);
+          console.log('GST fetched:', GST_VALUE);
+        } else {
+          console.warn('GST fetch not ok', gstRes.status);
+        }
+      } catch(e) { console.warn("GST fetch failed", e); }
+    }
+
+    if(localStorage.getItem('hasOrderHistory')){
+      const b = document.createElement('button'); b.textContent = 'History'; b.style.cssText = 'position:fixed;right:84px;bottom:22px;z-index:10002;padding:8px 10px;border-radius:8px;border:none;background:#111;color:#fff;cursor:pointer';
+      b.id='orderHistoryBtn';
+      b.addEventListener('click', showOrderHistoryModal);
+      document.body.appendChild(b);
+    }
+
+  }catch(err){ console.error('Menu load failed', err); qs('#menu') && (qs('#menu').innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted)">Failed to load menu. Check console.</div>'); }
+}
 init();
 
+/* ---------------- ORDER HISTORY (unchanged) ---------------- */
+function showOrderHistoryModal(){
+  const tableNo = new URLSearchParams(window.location.search).get('table') || '';
+  if(!SUPABASE_URL || !SUPABASE_ANON_KEY){
+    niceAlert({ icon:'info', title:'No backend', text:'Order history requires Supabase configured.' });
+    return;
+  }
+  (async ()=>{
+    try{
+      const q = tableNo ? `?table_no=eq.${encodeURIComponent(tableNo)}&order=created_at.desc` : '?order=created_at.desc';
+      const url = `${SUPABASE_URL}/rest/v1/${ORDERS_TABLE}${q}&select=id,table_no,total,created_at,status`;
+      const res = await fetch(url,{ headers:{ apikey: SUPABASE_ANON_KEY, Authorization:`Bearer ${SUPABASE_ANON_KEY}` }});
+      if(!res.ok) throw new Error('fetch failed');
+      const data = await res.json();
+      let html = '<div style="max-height:60vh;overflow:auto">';
+      if(!data.length) html += '<div style="padding:18px">No orders found</div>';
+      else {
+        html += '<table style="width:100%"><thead><tr><th>Time</th><th>Order ID</th><th>Total</th><th>Status</th></tr></thead><tbody>';
+        data.forEach(r=>{
+          html += `<tr><td>${(new Date(r.created_at)).toLocaleString()}</td><td>${r.id||'-'}</td><td>₹${r.total||0}</td><td>${r.status||'-'}</td></tr>`;
+        });
+        html += '</tbody></table>';
+      }
+      html += '</div>';
+      Swal.fire({ title:'Order History', html: html, width: 800, confirmButtonText:'Close' });
+    }catch(e){
+      console.error(e);
+      niceAlert({ icon:'error', title:'Error', text:'Could not load order history.' });
+    }
+  })();
+}
+
+/* ---------------- simple applyFilters placeholder (unchanged) ---------------- */
+function applyFilters(){
+  const q = qs('#search') ? qs('#search').value.trim().toLowerCase() : '';
+  const cat = qs('#categoryFilter') ? qs('#categoryFilter').value : '';
+  filtered = MENU.filter(it => (cat?it.category===cat:true) && (q?String(it.name).toLowerCase().includes(q) || String(it.category||'').toLowerCase().includes(q):true));
+  renderMenu(filtered);
+}
 </script>
+
 </body>
 </html>
+
