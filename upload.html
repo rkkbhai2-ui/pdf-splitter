@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Menu — QR Ordering</title>
+  <style>
+    :root{
+      --accent:#ff6347;
+      --bg:#f6f7f9;
+      --card:#ffffff;
+      --muted:#666;
+      --radius:12px;
+    }
+    *{box-sizing:border-box}
+    body{font-family:system-ui,Segoe UI,Arial; margin:0; background:var(--bg); color:#111;}
+    header{
+      background:var(--accent); color:#fff; padding:18px 16px; display:flex; gap:12px; align-items:center; justify-content:space-between;
+      position:sticky; top:0; z-index:20;
+    }
+    header h1{margin:0; font-size:1.05rem;}
+    header .meta{font-size:0.95rem; opacity:0.95}
+    .container{max-width:1100px; margin:18px auto; padding:0 16px;}
+    .controls{display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap;}
+    .controls input[type="search"], .controls select {
+      padding:10px 12px; border-radius:10px; border:1px solid #e3e6ea; min-width:180px;
+    }
+    .controls button{background:var(--accent); color:#fff; border:none; padding:10px 12px; border-radius:10px; cursor:pointer;}
+    .menu-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+      gap:12px;
+    }
+    .card{
+      background:var(--card); border-radius:var(--radius); overflow:hidden; box-shadow:0 6px 18px rgba(12,20,30,0.06);
+      display:flex; flex-direction:column;
+    }
+    .thumb{width:100%; aspect-ratio:4/3; object-fit:cover; display:block; background:#eee;}
+    .card-body{padding:12px; display:flex; flex-direction:column; gap:8px; flex:1;}
+    .title{font-weight:600; font-size:1rem;}
+    .cat{font-size:0.82rem; color:var(--muted);}
+    .price-row{display:flex; align-items:center; justify-content:space-between; margin-top:auto;}
+    .price{font-weight:700;}
+    .add-btn{background:var(--accent); color:#fff; border:none; padding:8px 10px; border-radius:8px; cursor:pointer;}
+    footer.cart-bar{
+      position:fixed; left:16px; right:16px; bottom:16px; z-index:40; display:flex; justify-content:flex-end;
+    }
+    .cart{
+      background:linear-gradient(180deg,#fff,#fafafa); padding:12px; border-radius:14px; box-shadow:0 8px 24px rgba(12,20,30,0.12); display:flex; gap:10px; align-items:center;
+    }
+    .cart button{padding:10px 12px; border-radius:10px; border:none; cursor:pointer;}
+    .badge{background:#222; color:#fff; padding:6px 8px; border-radius:999px; font-weight:700;}
+    /* modal */
+    .modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.45); display:none; align-items:center; justify-content:center; z-index:60;}
+    .modal{background:#fff; width:min(800px,95%); border-radius:12px; padding:16px; max-height:85vh; overflow:auto;}
+    table{width:100%; border-collapse:collapse;}
+    th,td{padding:8px 6px; text-align:left; border-bottom:1px solid #eee;}
+    .qty-btn{padding:6px 8px; border-radius:6px; border:1px solid #ddd; cursor:pointer; background:#fff;}
+    .small{font-size:0.9rem; color:var(--muted);}
+    @media (max-width:600px){
+      .controls{flex-direction:column; align-items:stretch;}
+      header{flex-direction:column; align-items:flex-start; gap:8px;}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Restaurant Menu</h1>
+      <div class="small">Scan QR and order — simple & free</div>
+    </div>
+    <div class="meta" id="table-info">Table: —</div>
+  </header>
+
+  <div class="container">
+    <div class="controls">
+      <input type="search" id="search" placeholder="Search items, e.g. paneer, biryani..." />
+      <select id="categoryFilter">
+        <option value="">All categories</option>
+      </select>
+      <button id="clearFilters">Clear</button>
+      <div style="flex:1"></div>
+      <div class="small">Items: <span id="count">0</span></div>
+    </div>
+
+    <div id="menu" class="menu-grid" aria-live="polite"></div>
+  </div>
+
+  <footer class="cart-bar">
+    <div class="cart" role="region" aria-label="Cart">
+      <div style="display:flex;flex-direction:column;margin-right:12px;">
+        <div style="font-weight:700">Cart</div>
+        <div class="small" id="cartItemsSmall">0 items • ₹0</div>
+      </div>
+      <button id="viewCart" style="background:#fff;border:1px solid #ddd;margin-right:8px;">View Cart</button>
+      <button id="checkout" style="background:var(--accent);color:#fff;">Checkout</button>
+    </div>
+  </footer>
+
+  <!-- modal -->
+  <div id="modalBackdrop" class="modal-backdrop">
+    <div class="modal" role="dialog" aria-modal="true">
+      <h3>Order Summary</h3>
+      <div id="orderContent"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+        <button id="closeModal" style="background:#fff;border:1px solid #ddd;padding:8px 10px;border-radius:8px;">Close</button>
+        <button id="sendOrder" style="background:var(--accent);color:#fff;padding:8px 12px;border-radius:8px;">Send Order</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ================== CONFIG ================== */
+/* Replace this with your raw github url OR "menu.json" if local. */
+const MENU_URL = "menu.json";
+/* Example GitHub raw: https://raw.githubusercontent.com/USERNAME/REPO/main/menu.json */
+
+/* ================== UTILITIES ================== */
+const qs = sel => document.querySelector(sel);
+const qsa = sel => Array.from(document.querySelectorAll(sel));
+const tableInfoEl = qs('#table-info');
+
+function getTableFromURL(){
+  const p = new URLSearchParams(window.location.search);
+  return p.get('table') || p.get('table_no') || p.get('t') || 'Unknown';
+}
+
+/* ================== APP STATE ================== */
+let MENU = []; // loaded menu items
+let filtered = [];
+let cart = []; // {id, name, price, qty}
+
+/* ================== RENDER ================== */
+function renderCategories(){
+  const cats = Array.from(new Set(MENU.map(i=>i.category))).filter(Boolean).sort();
+  const sel = qs('#categoryFilter');
+  sel.innerHTML = `<option value="">All categories</option>` + cats.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+}
+
+function escapeHtml(s){ return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;'); }
+
+function renderMenu(list){
+  const container = qs('#menu');
+  container.innerHTML = '';
+  document.getElementById('count').textContent = list.length;
+  if(list.length === 0){
+    container.innerHTML = `<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--muted)">No items found</div>`;
+    return;
+  }
+  list.forEach(item=>{
+    const div = document.createElement('div');
+    div.className = 'card';
+    // image lazy load with loading="lazy"
+    div.innerHTML = `
+      <img class="thumb" loading="lazy" decoding="async" src="${item.img}" alt="${escapeHtml(item.name)}">
+      <div class="card-body">
+        <div class="title">${escapeHtml(item.name)}</div>
+        <div class="cat small">${escapeHtml(item.category)}</div>
+        <div style="display:flex;align-items:center;gap:8px;" class="price-row">
+          <div class="price">₹${item.price}</div>
+          <button class="add-btn" data-id="${item.id}">Add</button>
+        </div>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+  // attach add events
+  qsa('.add-btn').forEach(btn=>{
+    btn.onclick = ()=> {
+      const id = Number(btn.dataset.id);
+      const item = MENU.find(m=>m.id===id);
+      addToCart(item, 1);
+      // small animation
+      btn.textContent = 'Added';
+      setTimeout(()=>btn.textContent = 'Add',700);
+    };
+  });
+}
+
+/* ================== FILTER & SEARCH ================== */
+function applyFilters(){
+  const q = qs('#search').value.trim().toLowerCase();
+  const cat = qs('#categoryFilter').value;
+  filtered = MENU.filter(it=>{
+    const matchesCat = cat ? it.category === cat : true;
+    const matchesQ = q ? (it.name.toLowerCase().includes(q) || (it.category||'').toLowerCase().includes(q)) : true;
+    return matchesCat && matchesQ;
+  });
+  renderMenu(filtered);
+}
+
+/* ================== CART ================== */
+function addToCart(item, qty=1){
+  const existing = cart.find(c=>c.id===item.id);
+  if(existing) existing.qty += qty;
+  else cart.push({id:item.id, name:item.name, price:item.price, qty});
+  updateCartUI();
+}
+
+function updateCartUI(){
+  const total = cart.reduce((s,i)=>s + i.price * i.qty, 0);
+  const count = cart.reduce((s,i)=>s + i.qty, 0);
+  qs('#cartItemsSmall').textContent = `${count} items • ₹${total}`;
+}
+
+function showCartModal(){
+  const modal = qs('#modalBackdrop');
+  const content = qs('#orderContent');
+  if(cart.length===0){
+    content.innerHTML = `<div style="padding:18px;color:var(--muted)">Cart is empty</div>`;
+  } else {
+    let html = `<table><thead><tr><th>Item</th><th>Price</th><th>Qty</th><th>Total</th></tr></thead><tbody>`;
+    cart.forEach(ci=>{
+      html += `<tr>
+        <td>${escapeHtml(ci.name)}</td>
+        <td>₹${ci.price}</td>
+        <td>
+          <button class="qty-btn" data-act="dec" data-id="${ci.id}">-</button>
+          &nbsp; ${ci.qty} &nbsp;
+          <button class="qty-btn" data-act="inc" data-id="${ci.id}">+</button>
+        </td>
+        <td>₹${ci.price * ci.qty}</td>
+      </tr>`;
+    });
+    const total = cart.reduce((s,i)=>s + i.price*i.qty,0);
+    html += `</tbody></table><div style="text-align:right;margin-top:8px;font-weight:700">Total: ₹${total}</div>`;
+    content.innerHTML = html;
+
+    // attach qty events
+    qsa('.qty-btn').forEach(b=>{
+      b.onclick = () => {
+        const id = Number(b.dataset.id);
+        const act = b.dataset.act;
+        const item = cart.find(c=>c.id===id);
+        if(!item) return;
+        if(act === 'inc') item.qty++;
+        else item.qty = Math.max(0, item.qty - 1);
+        // remove zero-qty
+        cart = cart.filter(c=>c.qty>0);
+        showCartModal();
+        updateCartUI();
+      };
+    });
+  }
+  modal.style.display = 'flex';
+}
+
+/* ================== CHECKOUT / SEND ORDER ================== */
+function buildOrderPayload(){
+  const table = getTableFromURL();
+  const order = {
+    table,
+    created_at: new Date().toISOString(),
+    items: cart.map(c=>({id:c.id, name:c.name, price:c.price, qty:c.qty})),
+    total: cart.reduce((s,i)=>s + i.price*i.qty, 0)
+  };
+  return order;
+}
+
+async function sendOrder(){
+  if(cart.length===0) { alert('Cart is empty'); return; }
+  const payload = buildOrderPayload();
+  // For now we just show JSON to user. You can POST this to your Apps Script webhook or Firebase.
+  try {
+    // Example: send to webhook (uncomment & replace WEBHOOK_URL to enable)
+    /*
+    const WEBHOOK_URL = "YOUR_APPS_SCRIPT_WEBHOOK_URL";
+    const res = await fetch(WEBHOOK_URL, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(payload)
+    });
+    if(!res.ok) throw new Error('Network response was not ok');
+    alert('Order sent to kitchen!');
+    */
+    // fallback: show JSON and copy to clipboard
+    const txt = JSON.stringify(payload, null, 2);
+    await navigator.clipboard.writeText(txt);
+    alert('Order JSON copied to clipboard (you can paste to owner).');
+    // clear cart
+    cart = [];
+    updateCartUI();
+    qs('#modalBackdrop').style.display = 'none';
+  } catch(err){
+    console.error(err);
+    alert('Failed to send order. See console for details.');
+  }
+}
+
+/* ================== BOOTSTRAP / FETCH MENU ================== */
+async function init(){
+  tableInfoEl.textContent = 'Table: ' + getTableFromURL();
+
+  // allow local/testing fallback if MENU_URL not configured
+  if(!MENU_URL || MENU_URL.includes('PUT_YOUR_RAW_URL_HERE')){
+    console.warn('MENU_URL not configured. Trying local menu.json...');
+  }
+
+  try {
+    const res = await fetch(MENU_URL);
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    MENU = await res.json();
+  } catch(err){
+    console.warn('Fetch failed:', err);
+    // fallback: try local menu.json
+    try {
+      const res2 = await fetch('menu.json');
+      if(res2.ok) {
+        MENU = await res2.json();
+      } else {
+        throw new Error('Local fallback failed');
+      }
+    } catch(err2){
+      console.error('Failed to load menu.json:', err2);
+      // show friendly message
+      qs('#menu').innerHTML = `<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--muted)">
+        Unable to load menu. Make sure MENU_URL is set to a CORS-friendly raw URL or keep a local menu.json in same folder.
+      </div>`;
+      return;
+    }
+  }
+
+  // ensure numeric ids and proper data
+  MENU = MENU.map((it, idx) => ({
+    id: Number(it.id ?? (idx+1)),
+    name: String(it.name ?? 'Item'),
+    price: Number(it.price ?? 0),
+    category: String(it.category ?? 'Misc'),
+    img: String(it.img ?? 'https://picsum.photos/400?random=' + (100+idx))
+  }));
+
+  renderCategories();
+  applyFilters();
+
+  // events
+  qs('#search').addEventListener('input', ()=> applyFilters());
+  qs('#categoryFilter').addEventListener('change', ()=> applyFilters());
+  qs('#clearFilters').addEventListener('click', ()=>{
+    qs('#search').value = '';
+    qs('#categoryFilter').value = '';
+    applyFilters();
+  });
+  qs('#viewCart').addEventListener('click', ()=> showCartModal());
+  qs('#checkout').addEventListener('click', ()=> {
+    // open modal first
+    showCartModal();
+  });
+  qs('#closeModal').addEventListener('click', ()=> qs('#modalBackdrop').style.display = 'none');
+  qs('#modalBackdrop').addEventListener('click', (e)=> { if(e.target === qs('#modalBackdrop')) qs('#modalBackdrop').style.display = 'none'; });
+  qs('#sendOrder').addEventListener('click', sendOrder);
+  updateCartUI();
+}
+
+/* run */
+init();
+
+</script>
+</body>
+</html>
